@@ -84,6 +84,8 @@ jobs:
           docker exec orphan `
             ${{ env.entry }} ${{ env.cmd }} C:\unpack.ps1
 
+      - uses: fawazahmed0/action-debug-vscode@main
+
       - name: Container – Configure Project with CMake
         run: |
           mkdir profiling
