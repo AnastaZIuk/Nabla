@@ -89,11 +89,6 @@ jobs:
             Start-Process -NoNewWindow -FilePath $nginxExe -ArgumentList "-p", "$basePath", "-c", "conf/nginx.conf"
           } -ArgumentList $nginxExe, "$(Join-Path $PWD 'nginx/nginx-1.24.0')"
 
-      - name: Check NGINX listen ports
-        shell: pwsh
-        run: |
-          netstat -ano | findstr ":10241"
-
       - name: Download NSC Godbolt artifact
         uses: actions/download-artifact@v4
         with:
@@ -190,6 +185,8 @@ jobs:
       - name: Download cloudflared
         run: |
           Invoke-WebRequest -Uri https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -OutFile cloudflared.exe
+
+      - uses: fawazahmed0/action-debug-vscode@main
 
       - name: Start restricted tunnel
         run: |          
