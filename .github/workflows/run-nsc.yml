@@ -15,6 +15,17 @@ on:
           - Release
           - RelWithDebInfo
           - Debug
+      tunnelDurationHours:
+        description: "Hours amount the restricted tunnel should stay up"
+        required: true
+        default: "1"
+        type: choice
+        options:
+          - "1"
+          - "2"
+          - "3"
+          - "4"
+          - "5"
       withDiscordMSG:
         description: "Send Discord message after tunnel is up"
         required: true
@@ -45,7 +56,7 @@ jobs:
               if ($LASTEXITCODE -ne 0) { exit 1 }
             }
 
-      - name: Download Restricted Proxy binaries, setup NGINX config
+      - name: Download Restricted Reverse Proxy binaries, setup NGINX config
         run: |
           Invoke-WebRequest -Uri https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -OutFile cloudflared.exe
           Invoke-WebRequest -Uri "https://nginx.org/download/nginx-1.24.0.zip" -OutFile nginx.zip
@@ -144,7 +155,7 @@ jobs:
 
           docker compose -f compose.generated.yml up -d
 
-      - name: Wait for NSC CE response
+      - name: Wait for NSC container response on port
         run: |
           $maxRetries = 24
           $retryDelay = 5
@@ -154,20 +165,20 @@ jobs:
             try {
               $response = Invoke-WebRequest -Uri "http://localhost:10240" -UseBasicParsing -TimeoutSec 5
               if ($response.StatusCode -eq 200) {
-                Write-Host "NSC CE on port 10240 is up and responding."
+                Write-Host "NSC container is up listening on port 10240 and responding."
                 $success = $true
                 break
               } else {
                 Write-Host "Received HTTP $($response.StatusCode), retrying..."
               }
             } catch {
-              Write-Host "NSC CE not responding yet, retrying..."
+              Write-Host "NSC container is not responding on port 10240, retrying..."
             }
             Start-Sleep -Seconds $retryDelay
           }
       
           if (-not $success) {
-            Write-Error "No response from NSC CE on port 10240, timeout."
+            Write-Error "No response from NSC container on port 10240, timeout."
             exit 1
           }
           
@@ -213,8 +224,11 @@ jobs:
           $workflowRunURL = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           $sendDiscord = "${{ inputs.withDiscordMSG }}" -eq "true"
 
+          $duration = [int]${{ inputs.tunnelDurationHours }} * 3600
+          Start-Sleep -Seconds $duration
+
           $description = @"
-          - tunnel opened for 5 hours, click [here](<$url>) to connect
+          - tunnel opened for ${{ inputs.tunnelDurationHours }} hours, click [here](<$url>) to connect
           - workflow [logs #${{ github.run_id }}](<$workflowRunURL>)
           - image downloaded from [run #$runId](<$composedURL>)
           - dispatched by $actor
@@ -238,4 +252,4 @@ jobs:
               Invoke-RestMethod -Uri $webhookUrl -Method Post -ContentType 'application/json' -Body $payload
           }
           
-          Start-Sleep -Seconds 18000
+          Start-Sleep -Seconds $duration
