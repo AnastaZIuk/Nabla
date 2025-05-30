@@ -83,8 +83,6 @@ jobs:
           
           '${{ secrets.NSC_BASIC_AUTH_HTPASSWD }}' | Out-File nginx/nginx-1.24.0/conf/.htpasswd -Encoding ascii
 
-      - uses: fawazahmed0/action-debug-vscode@main
-
       - name: Download NSC Godbolt artifact
         uses: actions/download-artifact@v4
         with:
