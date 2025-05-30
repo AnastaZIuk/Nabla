@@ -60,13 +60,12 @@ jobs:
           http {
             server {
               listen 10241;
-              server_name localhost;
       
               location / {
                 auth_basic "Restricted Compiler Explorer access for Development NSC Artifact Tests";
                 auth_basic_user_file conf/.htpasswd;
       
-                proxy_pass http://localhost:10240;
+                proxy_pass http://127.0.0.1:10240;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
               }
