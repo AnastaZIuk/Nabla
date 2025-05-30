@@ -58,24 +58,24 @@ jobs:
       
           @"
           events {}
-          
+      
           http {
             server {
               listen 10241;
               server_name localhost;
-          
+      
               location / {
                 auth_basic "Restricted Compiler Explorer access for Development NSC Artifact Tests";
                 auth_basic_user_file conf/.htpasswd;
-          
+      
                 proxy_pass http://localhost:10240;
-                proxy_set_header Host $$host;
-                proxy_set_header X-Real-IP $$remote_addr;
+                proxy_set_header Host \$host;
+                proxy_set_header X-Real-IP \$remote_addr;
               }
             }
           }
           "@ | Out-File nginx/nginx-1.24.0/conf/nginx.conf -Encoding ascii
-
+      
           Write-Host "::group::Generated nginx.conf"
           Get-Content nginx/nginx-1.24.0/conf/nginx.conf
           Write-Host "::endgroup::"
@@ -84,8 +84,11 @@ jobs:
       
           & $nginxExe -t -p "nginx/nginx-1.24.0" -c "conf/nginx.conf"
       
-          Start-Process -NoNewWindow -FilePath $nginxExe -ArgumentList "-p", "nginx/nginx-1.24.0", "-c", "conf/nginx.conf"
-          
+          Start-Job -ScriptBlock {
+            param($nginxExe, $basePath)
+            Start-Process -NoNewWindow -FilePath $nginxExe -ArgumentList "-p", "$basePath", "-c", "conf/nginx.conf"
+          } -ArgumentList $nginxExe, "$(Join-Path $PWD 'nginx/nginx-1.24.0')"
+
       - name: Download NSC Godbolt artifact
         uses: actions/download-artifact@v4
         with:
