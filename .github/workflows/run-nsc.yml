@@ -60,7 +60,7 @@ jobs:
       
           http {
             server {
-              listen 8080;
+              listen 10241;
       
               location / {
                 auth_basic \"Restricted Compiler Explorer access for Development NSC Artifact Tests\";
@@ -142,7 +142,7 @@ jobs:
 
           docker compose -f compose.generated.yml up -d
 
-      - name: Wait for local server on port 10240
+      - name: Wait for response
         run: |
           $maxRetries = 24
           $retryDelay = 5
@@ -150,7 +150,7 @@ jobs:
       
           for ($i = 0; $i -lt $maxRetries; $i++) {
             try {
-              $response = Invoke-WebRequest -Uri "http://localhost:10240" -UseBasicParsing -TimeoutSec 5
+              $response = Invoke-WebRequest -Uri "http://localhost:10241" -UseBasicParsing -TimeoutSec 5
               if ($response.StatusCode -eq 200) {
                 Write-Host "Local server is up and responding."
                 $success = $true
@@ -179,7 +179,7 @@ jobs:
 
       - name: Start tunnel
         run: |          
-          Start-Process -NoNewWindow -FilePath .\cloudflared.exe -ArgumentList "tunnel", "--url", "http://localhost:10240", "--logfile", "cf.log"
+          Start-Process -NoNewWindow -FilePath .\cloudflared.exe -ArgumentList "tunnel", "--url", "http://localhost:10241", "--logfile", "cf.log"
           
           $tries = 60
           $url = $null
