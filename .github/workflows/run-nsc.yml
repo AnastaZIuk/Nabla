@@ -53,8 +53,8 @@ jobs:
       
           Remove-Item -Recurse -Force "nginx/nginx-1.24.0/conf"
           New-Item -ItemType Directory -Path "nginx/nginx-1.24.0/conf" -Force | Out-Null
-      
-          "DGP:{PLAIN}${{ secrets.NSC_HTTP_AUTH_PAT }}" | Out-File nginx/nginx-1.24.0/conf/.htpasswd -Encoding ascii
+
+          "${{ secrets.NSC_BASIC_AUTH_HTPASSWD }}" | Out-File nginx/nginx-1.24.0/conf/.htpasswd -Encoding ascii
       
           @'
           events {}
@@ -151,40 +151,34 @@ jobs:
 
           docker compose -f compose.generated.yml up -d
 
-      - name: Wait for response
+      - name: Wait for NSC CE response
         run: |
-          $username = "DGP"
-          $password = "${{ secrets.NSC_HTTP_AUTH_PAT }}"
-          $bytes = [System.Text.Encoding]::ASCII.GetBytes("$username`:$password")
-          $encodedAuth = [Convert]::ToBase64String($bytes)
-          $headers = @{ Authorization = "Basic $encodedAuth" }
-      
           $maxRetries = 24
           $retryDelay = 5
           $success = $false
       
           for ($i = 0; $i -lt $maxRetries; $i++) {
             try {
-              $response = Invoke-WebRequest -Uri "http://localhost:10241" -UseBasicParsing -TimeoutSec 5 -Headers $headers
+              $response = Invoke-WebRequest -Uri "http://localhost:10240" -UseBasicParsing -TimeoutSec 5
               if ($response.StatusCode -eq 200) {
-                Write-Host "Local server is up and responding with auth."
+                Write-Host "NSC CE on port 10240 is up and responding."
                 $success = $true
                 break
               } else {
                 Write-Host "Received HTTP $($response.StatusCode), retrying..."
               }
             } catch {
-              Write-Host "Local server not responding yet, retrying..."
+              Write-Host "NSC CE not responding yet, retrying..."
             }
             Start-Sleep -Seconds $retryDelay
           }
       
           if (-not $success) {
-            Write-Error "No response, timeout."
+            Write-Error "No response from NSC CE on port 10240, timeout."
             exit 1
           }
- 
-      - name: Print Container Logs
+          
+      - name: Print NSC container logs
         run: |
           docker logs nsc-godbolt
 
@@ -192,7 +186,7 @@ jobs:
         run: |
           Invoke-WebRequest -Uri https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -OutFile cloudflared.exe
 
-      - name: Start tunnel
+      - name: Start restricted tunnel
         run: |          
           Start-Process -NoNewWindow -FilePath .\cloudflared.exe -ArgumentList "tunnel", "--url", "http://localhost:10241", "--logfile", "cf.log"
           
