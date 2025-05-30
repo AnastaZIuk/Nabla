@@ -190,6 +190,9 @@ jobs:
           docker logs nsc-godbolt
 
       - name: Start Restricted Tunnel
+        env:
+          DISCORD_ENABLED: ${{ inputs.withDiscordMSG }}
+          TUNNEL_DURATION_HOURS: ${{ inputs.tunnelDurationHours }}
         run: |
           Start-Process -NoNewWindow -FilePath .\nginx\nginx-1.24.0\nginx.exe -ArgumentList '-p', (Join-Path $PWD 'nginx/nginx-1.24.0'), '-c', 'conf/nginx.conf'  
           Start-Process -NoNewWindow -FilePath .\cloudflared.exe -ArgumentList "tunnel", "--url", "http://localhost:10241", "--logfile", "cf.log"
@@ -213,25 +216,27 @@ jobs:
               Start-Sleep -Seconds 1
               $tries -= 1
           }
-          
+
           if (-not $url) {
               Write-Error "Could not get tunnel URL from cloudflared log"
               exit 1
           }
 
           $webhookUrl = "$env:DISCORD_WEBHOOK"
-          $runId = "${{ inputs.run_id }}"
+          $runId = "$env:GITHUB_RUN_ID"
           $actor = "$env:GITHUB_ACTOR"
           $composedURL = "https://github.com/Devsh-Graphics-Programming/Nabla/actions/runs/$runId"
-          $workflowRunURL = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          $sendDiscord = "${{ inputs.withDiscordMSG }}" -eq "true"
+          $workflowRunURL = "https://github.com/$env:GITHUB_REPOSITORY/actions/runs/$runId"
+          $sendDiscord = "$env:DISCORD_ENABLED" -eq "true"
+          $hours = [int]$env:TUNNEL_DURATION_HOURS
+          $duration = $hours * 3600
 
-          $duration = [int]${{ inputs.tunnelDurationHours }} * 3600
-          Start-Sleep -Seconds $duration
+          Write-Host "Blocking job for $hours hours"
 
           $description = @"
-          - tunnel opened for ${{ inputs.tunnelDurationHours }} hours, click [here](<$url>) to connect
-          - workflow [logs #${{ github.run_id }}](<$workflowRunURL>)
+          - tunnel opened for $hours hours, click [here](<$url>) to connect
+          - requires authentication
+          - workflow [logs #$runId](<$workflowRunURL>)
           - image downloaded from [run #$runId](<$composedURL>)
           - dispatched by $actor
           "@
@@ -242,17 +247,17 @@ jobs:
                       title = "Running NSC Godbolt Container"
                       description = $description
                       color = 15844367
-                      footer = @{
-                          text = "sent from GitHub Actions runner"
-                      }
+                      footer = @{ text = "sent from GitHub Actions runner" }
                       timestamp = (Get-Date).ToString("o")
                   }
               )
           } | ConvertTo-Json -Depth 10
-          
-          if ($sendDiscord) {
-              Invoke-RestMethod -Uri $webhookUrl -Method Post -ContentType 'application/json' -Body $payload
-          }
 
-          Write-Host "Blocking job for ${{ inputs.tunnelDurationHours }} hours"
+          if ($sendDiscord) {
+              Write-Host "Sending Discord webhook..."
+              Invoke-RestMethod -Uri $webhookUrl -Method Post -ContentType 'application/json' -Body $payload
+          } else {
+              Write-Host "Discord webhook disabled"
+          }
+          
           Start-Sleep -Seconds $duration
