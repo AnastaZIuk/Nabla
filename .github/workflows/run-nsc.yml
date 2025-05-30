@@ -69,12 +69,16 @@ jobs:
                 auth_basic_user_file conf/.htpasswd;
           
                 proxy_pass http://localhost:10240;
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header Host $$host;
+                proxy_set_header X-Real-IP $$remote_addr;
               }
             }
           }
           "@ | Out-File nginx/nginx-1.24.0/conf/nginx.conf -Encoding ascii
+
+          Write-Host "::group::Generated nginx.conf"
+          Get-Content nginx/nginx-1.24.0/conf/nginx.conf
+          Write-Host "::endgroup::"
       
           $nginxExe = Join-Path $PWD "nginx/nginx-1.24.0/nginx.exe"
       
