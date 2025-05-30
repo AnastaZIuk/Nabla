@@ -53,8 +53,10 @@ jobs:
       
           Remove-Item -Recurse -Force "nginx/nginx-1.24.0/conf"
           New-Item -ItemType Directory -Path "nginx/nginx-1.24.0/conf" -Force | Out-Null
+
+          $htpasswdPath = (Resolve-Path "nginx/nginx-1.24.0/conf/.htpasswd").Path -replace '\\', '/'
       
-          @'
+          @"
           events {}
       
           http {
@@ -62,16 +64,16 @@ jobs:
               listen 10241;
       
               location / {
-                auth_basic "Restricted Compiler Explorer access for Development NSC Artifact Tests";
-                auth_basic_user_file conf/.htpasswd;
+                auth_basic "Restricted Compiler Explorer access for Development & NSC Artifact Tests, downloaded from Nabla actions pipeline";
+                auth_basic_user_file "$htpasswdPath";
       
                 proxy_pass http://127.0.0.1:10240;
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header Host `$host;
+                proxy_set_header X-Real-IP `$remote_addr;
               }
             }
           }
-          '@ | Out-File nginx/nginx-1.24.0/conf/nginx.conf -Encoding ascii
+          "@ | Out-File nginx/nginx-1.24.0/conf/nginx.conf -Encoding ascii
       
           Write-Host "::group::Generated nginx.conf"
           Get-Content nginx/nginx-1.24.0/conf/nginx.conf
