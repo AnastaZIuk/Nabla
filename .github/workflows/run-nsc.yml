@@ -208,7 +208,6 @@ jobs:
           $webhookUrl = "$env:DISCORD_WEBHOOK"
           $runId = "${{ inputs.run_id }}"
           $actor = "$env:GITHUB_ACTOR"
-          $startTime = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
           $composedURL = "https://github.com/Devsh-Graphics-Programming/Nabla/actions/runs/$runId"
           $workflowRunURL = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           $sendDiscord = "${{ inputs.withDiscordMSG }}" -eq "true"
