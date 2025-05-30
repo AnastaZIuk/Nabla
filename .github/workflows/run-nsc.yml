@@ -56,6 +56,9 @@ jobs:
               if ($LASTEXITCODE -ne 0) { exit 1 }
             }
 
+            $sendDiscord = "${{ inputs.withDiscordMSG }}" -eq "true"
+            Write-Host "::notice::Should send discord message? $sendDiscord"
+
       - name: Download Restricted Reverse Proxy binaries, setup NGINX config
         run: |
           Invoke-WebRequest -Uri https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -OutFile cloudflared.exe
@@ -188,9 +191,8 @@ jobs:
 
       - name: Start Restricted Tunnel
         run: |
-          Start-Process -NoNewWindow -FilePath .\nginx\nginx-1.24.0\nginx.exe -ArgumentList '-p', (Join-Path $PWD 'nginx/nginx-1.24.0'), '-c', 'conf/nginx.conf'
+          Start-Process -NoNewWindow -FilePath .\nginx\nginx-1.24.0\nginx.exe -ArgumentList '-p', (Join-Path $PWD 'nginx/nginx-1.24.0'), '-c', 'conf/nginx.conf'  
           Start-Process -NoNewWindow -FilePath .\cloudflared.exe -ArgumentList "tunnel", "--url", "http://localhost:10241", "--logfile", "cf.log"
-
           netstat -an | findstr 10241
           
           $tries = 60
@@ -251,5 +253,6 @@ jobs:
           if ($sendDiscord) {
               Invoke-RestMethod -Uri $webhookUrl -Method Post -ContentType 'application/json' -Body $payload
           }
-          
+
+          Write-Host "Blocking job for ${{ inputs.tunnelDurationHours }} hours"
           Start-Sleep -Seconds $duration
