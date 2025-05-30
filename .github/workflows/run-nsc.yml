@@ -51,6 +51,8 @@ jobs:
           Invoke-WebRequest -Uri "https://nginx.org/download/nginx-1.24.0.zip" -OutFile nginx.zip
           Expand-Archive nginx.zip -DestinationPath nginx
       
+          New-Item -ItemType Directory -Path "nginx/conf" -Force | Out-Null
+      
           "DGP:{PLAIN}${{ secrets.NSC_HTTP_AUTH_PAT }}" | Out-File nginx/conf/.htpasswd -Encoding ascii
       
           @"
