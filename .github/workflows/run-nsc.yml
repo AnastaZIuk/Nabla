@@ -54,6 +54,7 @@ jobs:
           Remove-Item -Recurse -Force "nginx/nginx-1.24.0/conf"
           New-Item -ItemType Directory -Path "nginx/nginx-1.24.0/conf" -Force | Out-Null
 
+          '${{ secrets.NSC_BASIC_AUTH_HTPASSWD }}' | Out-File nginx/nginx-1.24.0/conf/.htpasswd -Encoding ascii
           $htpasswdPath = (Resolve-Path "nginx/nginx-1.24.0/conf/.htpasswd").Path -replace '\\', '/'
       
           @"
@@ -80,8 +81,6 @@ jobs:
           Write-Host "::endgroup::"
           
           & "nginx/nginx-1.24.0/nginx.exe" -t -p "nginx/nginx-1.24.0" -c "conf/nginx.conf"
-          
-          '${{ secrets.NSC_BASIC_AUTH_HTPASSWD }}' | Out-File nginx/nginx-1.24.0/conf/.htpasswd -Encoding ascii
 
       - name: Download NSC Godbolt artifact
         uses: actions/download-artifact@v4
