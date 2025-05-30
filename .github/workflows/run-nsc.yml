@@ -45,16 +45,14 @@ jobs:
               if ($LASTEXITCODE -ne 0) { exit 1 }
             }
 
-      - name: Install and Start NGINX with Basic Auth
-        shell: pwsh
+      - name: Download Restricted Proxy binaries, setup NGINX config
         run: |
+          Invoke-WebRequest -Uri https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -OutFile cloudflared.exe
           Invoke-WebRequest -Uri "https://nginx.org/download/nginx-1.24.0.zip" -OutFile nginx.zip
           Expand-Archive nginx.zip -DestinationPath nginx
       
           Remove-Item -Recurse -Force "nginx/nginx-1.24.0/conf"
           New-Item -ItemType Directory -Path "nginx/nginx-1.24.0/conf" -Force | Out-Null
-
-          "${{ secrets.NSC_BASIC_AUTH_HTPASSWD }}" | Out-File nginx/nginx-1.24.0/conf/.htpasswd -Encoding ascii
       
           @'
           events {}
@@ -79,15 +77,8 @@ jobs:
           Write-Host "::group::Generated nginx.conf"
           Get-Content nginx/nginx-1.24.0/conf/nginx.conf
           Write-Host "::endgroup::"
-      
-          $nginxExe = Join-Path $PWD "nginx/nginx-1.24.0/nginx.exe"
-      
-          & $nginxExe -t -p "nginx/nginx-1.24.0" -c "conf/nginx.conf"
-      
-          Start-Job -ScriptBlock {
-            param($nginxExe, $basePath)
-            Start-Process -NoNewWindow -FilePath $nginxExe -ArgumentList "-p", "$basePath", "-c", "conf/nginx.conf"
-          } -ArgumentList $nginxExe, "$(Join-Path $PWD 'nginx/nginx-1.24.0')"
+          
+          & "nginx/nginx-1.24.0/nginx.exe" -t -p "nginx/nginx-1.24.0" -c "conf/nginx.conf"
 
       - name: Download NSC Godbolt artifact
         uses: actions/download-artifact@v4
@@ -182,15 +173,13 @@ jobs:
         run: |
           docker logs nsc-godbolt
 
-      - name: Download cloudflared
+      - name: Start Restricted Tunnel
         run: |
-          Invoke-WebRequest -Uri https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -OutFile cloudflared.exe
-
-      - uses: fawazahmed0/action-debug-vscode@main
-
-      - name: Start restricted tunnel
-        run: |          
+          '${{ secrets.NSC_BASIC_AUTH_HTPASSWD }}' | Out-File nginx/nginx-1.24.0/conf/.htpasswd -Encoding ascii
+          Start-Process -NoNewWindow -FilePath .\nginx\nginx-1.24.0\nginx.exe -ArgumentList '-p', (Join-Path $PWD 'nginx/nginx-1.24.0'), '-c', 'conf/nginx.conf'
           Start-Process -NoNewWindow -FilePath .\cloudflared.exe -ArgumentList "tunnel", "--url", "http://localhost:10241", "--logfile", "cf.log"
+
+          netstat -an | findstr 10241
           
           $tries = 60
           $url = $null
