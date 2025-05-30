@@ -44,7 +44,40 @@ jobs:
               docker network create --driver nat docker_default
               if ($LASTEXITCODE -ne 0) { exit 1 }
             }
-    
+
+      - name: Install and Start NGINX with Basic Auth
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://nginx.org/download/nginx-1.24.0.zip" -OutFile nginx.zip
+          Expand-Archive nginx.zip -DestinationPath nginx
+      
+          "DGP:{PLAIN}${{ secrets.NSC_HTTP_AUTH_PAT }}" | Out-File nginx/conf/.htpasswd -Encoding ascii
+      
+          @"
+          events {}
+      
+          http {
+            server {
+              listen 8080;
+      
+              location / {
+                auth_basic \"Restricted Compiler Explorer access for Development NSC Artifact Tests\";
+                auth_basic_user_file conf/.htpasswd;
+      
+                proxy_pass http://localhost:10240;
+                proxy_set_header Host \$host;
+                proxy_set_header X-Real-IP \$remote_addr;
+              }
+            }
+          }
+          "@ | Out-File nginx/conf/nginx.conf -Encoding ascii
+      
+          $nginxExe = Join-Path $PWD "nginx/nginx-1.24.0/nginx.exe"
+      
+          & $nginxExe -t -p "nginx/nginx-1.24.0" -c "conf/nginx.conf"
+      
+          Start-Process -NoNewWindow -FilePath $nginxExe -ArgumentList "-p", "nginx/nginx-1.24.0"
+
       - name: Download NSC Godbolt artifact
         uses: actions/download-artifact@v4
         with:
