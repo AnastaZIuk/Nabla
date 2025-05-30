@@ -78,6 +78,10 @@ jobs:
           Write-Host "::endgroup::"
           
           & "nginx/nginx-1.24.0/nginx.exe" -t -p "nginx/nginx-1.24.0" -c "conf/nginx.conf"
+          
+          '${{ secrets.NSC_BASIC_AUTH_HTPASSWD }}' | Out-File nginx/nginx-1.24.0/conf/.htpasswd -Encoding ascii
+
+      - uses: fawazahmed0/action-debug-vscode@main
 
       - name: Download NSC Godbolt artifact
         uses: actions/download-artifact@v4
@@ -174,7 +178,6 @@ jobs:
 
       - name: Start Restricted Tunnel
         run: |
-          '${{ secrets.NSC_BASIC_AUTH_HTPASSWD }}' | Out-File nginx/nginx-1.24.0/conf/.htpasswd -Encoding ascii
           Start-Process -NoNewWindow -FilePath .\nginx\nginx-1.24.0\nginx.exe -ArgumentList '-p', (Join-Path $PWD 'nginx/nginx-1.24.0'), '-c', 'conf/nginx.conf'
           Start-Process -NoNewWindow -FilePath .\cloudflared.exe -ArgumentList "tunnel", "--url", "http://localhost:10241", "--logfile", "cf.log"
 
