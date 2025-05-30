@@ -51,9 +51,10 @@ jobs:
           Invoke-WebRequest -Uri "https://nginx.org/download/nginx-1.24.0.zip" -OutFile nginx.zip
           Expand-Archive nginx.zip -DestinationPath nginx
       
-          New-Item -ItemType Directory -Path "nginx/conf" -Force | Out-Null
+          Remove-Item -Recurse -Force "nginx/nginx-1.24.0/conf"
+          New-Item -ItemType Directory -Path "nginx/nginx-1.24.0/conf" -Force | Out-Null
       
-          "DGP:{PLAIN}${{ secrets.NSC_HTTP_AUTH_PAT }}" | Out-File nginx/conf/.htpasswd -Encoding ascii
+          "DGP:{PLAIN}${{ secrets.NSC_HTTP_AUTH_PAT }}" | Out-File nginx/nginx-1.24.0/conf/.htpasswd -Encoding ascii
       
           @"
           events {}
@@ -61,6 +62,7 @@ jobs:
           http {
             server {
               listen 10241;
+              server_name  localhost;
       
               location / {
                 auth_basic \"Restricted Compiler Explorer access for Development NSC Artifact Tests\";
@@ -72,14 +74,14 @@ jobs:
               }
             }
           }
-          "@ | Out-File nginx/conf/nginx.conf -Encoding ascii
+          "@ | Out-File nginx/nginx-1.24.0/conf/nginx.conf -Encoding ascii
       
           $nginxExe = Join-Path $PWD "nginx/nginx-1.24.0/nginx.exe"
       
           & $nginxExe -t -p "nginx/nginx-1.24.0" -c "conf/nginx.conf"
       
           Start-Process -NoNewWindow -FilePath $nginxExe -ArgumentList "-p", "nginx/nginx-1.24.0", "-c", "conf/nginx.conf"
-
+          
       - name: Download NSC Godbolt artifact
         uses: actions/download-artifact@v4
         with:
