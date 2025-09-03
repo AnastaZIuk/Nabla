@@ -12,6 +12,8 @@ jobs:
       - name: Checkout (shallow, no submodules)
         uses: actions/checkout@v4
         with:
+          repository: Devsh-Graphics-Programming/Nabla
+          ref: master
           fetch-depth: 1
           submodules: 'false'
           filter: blob:none
@@ -27,19 +29,14 @@ jobs:
           restore-keys: |
             nabla-mirror-
 
-      - name: Ensure mirror up-to-date for current ref
+      - name: Ensure mirror up-to-date (master only)
         shell: pwsh
         run: |
           if (-not (Test-Path '.git-mirror')) { New-Item -ItemType Directory -Path .git-mirror | Out-Null }
           if (-not (Test-Path '.git-mirror/nabla.git')) {
-            git clone --mirror --filter=blob:none https://github.com/${env:GITHUB_REPOSITORY}.git .git-mirror/nabla.git
+            git clone --mirror --filter=blob:none https://github.com/Devsh-Graphics-Programming/Nabla.git .git-mirror/nabla.git
           }
-          $ref = $env:GITHUB_REF
-          if ($ref -like 'refs/pull/*') {
-            git --git-dir .git-mirror/nabla.git fetch --filter=blob:none --no-tags --force origin "$ref"
-          } else {
-            git --git-dir .git-mirror/nabla.git fetch --filter=blob:none --no-tags --force origin "$env:GITHUB_SHA"
-          }
+          git --git-dir .git-mirror/nabla.git fetch --filter=blob:none --no-tags --force origin master
 
       - name: Init submodules (shallow + parallel)
         shell: pwsh
@@ -52,10 +49,11 @@ jobs:
           git submodule sync --recursive
           git -c submodule.alternateLocation=superproject -c submodule.alternateErrorStrategy=info -c submodule.fetchJobs=64 submodule update --init --recursive --depth 1 --jobs 64 --recommend-shallow
 
-      - name: Save git objects cache (only our repo)
+      - name: Save git objects cache (only master from upstream)
         if: >
-          github.event_name == 'push' ||
-          (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false)
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+          github.repository == 'Devsh-Graphics-Programming/Nabla' &&
+          github.ref == 'refs/heads/master'
         uses: actions/cache/save@v4
         with:
           path: |
