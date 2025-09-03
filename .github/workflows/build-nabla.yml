@@ -12,12 +12,19 @@ jobs:
       - name: Init Git
         shell: pwsh
         run: |
-          git config --global url."https://github.com/".insteadOf "git@github.com:"
-          git config --global protocol.version 2
-          git config --global fetch.parallel 64
-          git config --global checkout.workers 16
-          git config --global http.version HTTP/2
-          Get-Content "$env:USERPROFILE\.gitconfig"
+          @'
+          [url "https://github.com/"]
+              insteadOf = git@github.com:
+          [protocol]
+              version = 2
+          [fetch]
+              parallel = 64
+          [checkout]
+              workers = 16
+          [http]
+              version = HTTP/2
+          '@ | Set-Content "$env:USERPROFILE\.gitconfig"
+      
           git init .
           git remote add origin https://github.com/Devsh-Graphics-Programming/Nabla.git
 
