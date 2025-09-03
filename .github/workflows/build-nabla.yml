@@ -12,19 +12,6 @@ jobs:
       - name: Init Git
         shell: bash
         run: |
-          git config --global url."https://github.com/".insteadOf git@github.com:
-          git config --global url."https://github.com/".insteadOf ssh://git@github.com/
-          git config --global protocol.version 2
-          git config --global fetch.parallel 64
-          git config --global checkout.workers 16
-          git config --global http.version HTTP/2
-          git config --global core.fscache true
-          git config --global core.preloadindex true
-          git config --global core.autocrlf false
-          git config --global core.symlinks true
-          git config --global core.ignoreStatUnchanged true
-          git config --global gc.auto 0
-          git config --global index.threads 16
           git init .
           git remote add origin https://github.com/Devsh-Graphics-Programming/Nabla.git
 
@@ -47,6 +34,20 @@ jobs:
           GCM_INTERACTIVE: "never"
           GIT_CEILING_DIRECTORIES: ${{ github.workspace }}
         run: |
+          git config --global url."https://github.com/".insteadOf git@github.com:
+          git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+          git config --global protocol.version 2
+          git config --global fetch.parallel 64
+          git config --global checkout.workers 16
+          git config --global http.version HTTP/2
+          git config --global core.fscache true
+          git config --global core.preloadindex true
+          git config --global core.autocrlf false
+          git config --global core.symlinks true
+          git config --global core.ignoreStatUnchanged true
+          git config --global gc.auto 0
+          git config --global index.threads 16
+
           mkdir -p .git-mirror
           if [ ! -d ".git-mirror/nabla.git" ]; then
             git clone --mirror --filter=blob:none https://github.com/Devsh-Graphics-Programming/Nabla.git .git-mirror/nabla.git
