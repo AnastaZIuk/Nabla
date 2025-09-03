@@ -7,10 +7,10 @@ on:
 
 jobs:
   nabla-checkout:
-    runs-on: windows-2022
-    steps:       
+    runs-on: ubuntu-22.04
+    steps:
       - name: Init Git
-        shell: pwsh
+        shell: bash
         run: |
           git config --global url."https://github.com/".insteadOf git@github.com:
           git config --global url."https://github.com/".insteadOf ssh://git@github.com/
@@ -21,7 +21,7 @@ jobs:
           git config --global core.fscache true
           git config --global core.preloadindex true
           git config --global core.autocrlf false
-          git config --global core.symlinks false
+          git config --global core.symlinks true
           git config --global core.ignoreStatUnchanged true
           git config --global gc.auto 0
           git config --global index.threads 16
@@ -39,7 +39,7 @@ jobs:
             nabla-mirror-
 
       - name: Checkout (mirror + submodules shallow)
-        shell: pwsh
+        shell: bash
         env:
           GIT_OPTIONAL_LOCKS: "0"
           GIT_ATTR_NOSYSTEM: "1"
@@ -47,19 +47,20 @@ jobs:
           GCM_INTERACTIVE: "never"
           GIT_CEILING_DIRECTORIES: ${{ github.workspace }}
         run: |
-          if (-not (Test-Path '.git-mirror')) { New-Item -ItemType Directory -Path .git-mirror | Out-Null }
-          if (-not (Test-Path '.git-mirror/nabla.git')) {
+          mkdir -p .git-mirror
+          if [ ! -d ".git-mirror/nabla.git" ]; then
             git clone --mirror --filter=blob:none https://github.com/Devsh-Graphics-Programming/Nabla.git .git-mirror/nabla.git
-          }
+          fi
+
           git --git-dir .git-mirror/nabla.git fetch --filter=blob:none --no-tags --force origin master
 
-          git fetch --depth=1 origin $env:GITHUB_REF
+          git fetch --depth=1 origin "$GITHUB_REF"
           git checkout FETCH_HEAD
 
           git submodule sync --recursive
-          git -c submodule.alternateLocation=superproject `
-              -c submodule.alternateErrorStrategy=info `
-              -c submodule.fetchJobs=64 `
+          git -c submodule.alternateLocation=superproject \
+              -c submodule.alternateErrorStrategy=info \
+              -c submodule.fetchJobs=64 \
               submodule update --init --recursive --depth 1 --jobs 64 --recommend-shallow
 
       - name: Save git objects cache (only master from upstream)
