@@ -9,12 +9,10 @@ jobs:
   nabla-checkout:
     runs-on: windows-2022
     steps:
-      - name: Restore git objects cache
+      - name: Restore mirror cache
         uses: actions/cache/restore@v4
         with:
-          path: |
-            ${{ runner.temp }}\git-mirror\nabla.git
-            .git\modules
+          path: ${{ runner.temp }}\git-mirror\nabla.git
           key: nabla-mirror-
           restore-keys: |
             nabla-mirror-
@@ -50,10 +48,21 @@ jobs:
           git fetch --depth=1 origin $env:GITHUB_REF
           git checkout FETCH_HEAD
 
+      - name: Restore submodules cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .git\modules
+          key: nabla-mirror-
+          restore-keys: |
+            nabla-mirror-
+
+      - name: Init submodules (shallow)
+        shell: pwsh
+        run: |
           git submodule sync --recursive
           git submodule update --init --recursive --depth 1 --jobs 64 --recommend-shallow
 
-      - name: Save git objects cache
+      - name: Save cache (mirror + modules, only master)
         if: github.ref == 'refs/heads/master'
         uses: actions/cache/save@v4
         with:
