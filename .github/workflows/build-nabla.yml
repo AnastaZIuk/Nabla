@@ -50,10 +50,7 @@ jobs:
           git -c submodule.alternateLocation=superproject -c submodule.alternateErrorStrategy=info -c submodule.fetchJobs=64 submodule update --init --recursive --depth 1 --jobs 64 --recommend-shallow
 
       - name: Save git objects cache (only master from upstream)
-        if: >
-          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-          github.repository == 'Devsh-Graphics-Programming/Nabla' &&
-          github.ref == 'refs/heads/master'
+        if: github.repository == 'Devsh-Graphics-Programming/Nabla' && github.ref == 'refs/heads/master'
         uses: actions/cache/save@v4
         with:
           path: |
