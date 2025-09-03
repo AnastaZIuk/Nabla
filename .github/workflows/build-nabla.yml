@@ -62,6 +62,8 @@ jobs:
           git -c submodule.alternateLocation=superproject \
               -c submodule.alternateErrorStrategy=info \
               -c submodule.fetchJobs=64 \
+              -c url.https://github.com/.insteadof=git@github.com: \
+              -c url.https://github.com/.insteadof=ssh://git@github.com/ \
               submodule update --init --recursive --depth 1 --jobs 64 --recommend-shallow
 
       - name: Save git objects cache (only master from upstream)
