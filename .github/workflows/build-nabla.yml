@@ -9,23 +9,18 @@ jobs:
   nabla-checkout:
     runs-on: windows-2022
     steps:       
-      - name: Init Git
+      - name: Git global config
         shell: pwsh
         run: |
-          @'
-          [url "https://github.com/"]
-              insteadOf = git@github.com:
-          [protocol]
-              version = 2
-          [fetch]
-              parallel = 64
-          [checkout]
-              workers = 16
-          [http]
-              version = HTTP/2
-          '@ | Set-Content "$env:USERPROFILE\.gitconfig"
-          git init .
-          git remote add origin https://github.com/Devsh-Graphics-Programming/Nabla.git
+          git config --global core.fscache true
+          git config --global core.preloadindex true
+          git config --global core.autocrlf false
+          git config --global core.symlinks false
+          git config --global protocol.version 2
+          git config --global url."https://github.com/".insteadOf git@github.com:
+          git config --global fetch.parallel 64
+          git config --global checkout.workers 16
+          git config --global http.version HTTP/2
 
       - name: Restore git objects cache
         uses: actions/cache/restore@v4
@@ -37,18 +32,20 @@ jobs:
           restore-keys: |
             nabla-mirror-
 
-      - name: Checkout (mirror + submodules shallow)
+      - name: Prepare mirror & worktree
         shell: pwsh
         run: |
           if (-not (Test-Path '.git-mirror')) { New-Item -ItemType Directory -Path .git-mirror | Out-Null }
           if (-not (Test-Path '.git-mirror/nabla.git')) {
             git clone --mirror --filter=blob:none https://github.com/Devsh-Graphics-Programming/Nabla.git .git-mirror/nabla.git
           }
-          git --git-dir .git-mirror/nabla.git fetch --filter=blob:none --no-tags --force origin master
+          git --git-dir .git-mirror/nabla.git fetch --filter=blob:none --no-tags --force origin +$env:GITHUB_REF:$env:GITHUB_REF
+          if (Test-Path '.git') { Remove-Item -Recurse -Force '.git' }
+          git --git-dir .git-mirror/nabla.git worktree add --force --detach . $env:GITHUB_SHA
 
-          git fetch --depth=1 origin $env:GITHUB_REF
-          git checkout FETCH_HEAD
-
+      - name: Submodules (shallow + alternates)
+        shell: pwsh
+        run: |
           git submodule sync --recursive
           git -c submodule.alternateLocation=superproject `
               -c submodule.alternateErrorStrategy=info `
