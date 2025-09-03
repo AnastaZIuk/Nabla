@@ -9,6 +9,11 @@ jobs:
   nabla-checkout:
     runs-on: windows-2022
     steps:
+      - name: Test Init Git
+        shell: pwsh
+        run: |
+          git init .
+          
       - name: Init Git
         shell: pwsh
         run: |
@@ -24,7 +29,6 @@ jobs:
           [http]
               version = HTTP/2
           '@ | Set-Content "$env:USERPROFILE\.gitconfig"
-      
           git init .
           git remote add origin https://github.com/Devsh-Graphics-Programming/Nabla.git
 
