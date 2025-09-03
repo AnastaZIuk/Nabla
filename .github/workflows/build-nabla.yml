@@ -35,6 +35,9 @@ jobs:
         env:
           GIT_OPTIONAL_LOCKS: "0"
           GIT_ATTR_NOSYSTEM: "1"
+          GIT_TERMINAL_PROMPT: "0"
+          GCM_INTERACTIVE: "never"
+          GIT_CEILING_DIRECTORIES: ${{ github.workspace }}
         run: |
           if (-not (Test-Path '.git-mirror')) { New-Item -ItemType Directory -Path .git-mirror | Out-Null }
           if (-not (Test-Path '.git-mirror/nabla.git')) {
