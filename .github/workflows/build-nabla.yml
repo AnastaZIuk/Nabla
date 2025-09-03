@@ -17,6 +17,7 @@ jobs:
           git config --global fetch.parallel 64
           git config --global checkout.workers 16
           git config --global http.version HTTP/2
+          Get-Content "$env:USERPROFILE\.gitconfig"
           git init .
           git remote add origin https://github.com/Devsh-Graphics-Programming/Nabla.git
 
