@@ -8,12 +8,7 @@ on:
 jobs:
   nabla-checkout:
     runs-on: windows-2022
-    steps:
-      - name: Test Init Git
-        shell: pwsh
-        run: |
-          git init .
-          
+    steps:       
       - name: Init Git
         shell: pwsh
         run: |
