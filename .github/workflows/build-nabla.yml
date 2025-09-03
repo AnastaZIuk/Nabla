@@ -8,8 +8,18 @@ on:
 jobs:
   nabla-checkout:
     runs-on: windows-2022
-    steps:       
-      - name: Init Git
+    steps:
+      - name: Restore git objects cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .git-mirror/nabla.git
+            .git/modules
+          key: nabla-mirror-
+          restore-keys: |
+            nabla-mirror-
+
+      - name: Checkout
         shell: pwsh
         run: |
           @'
@@ -24,22 +34,11 @@ jobs:
           [http]
               version = HTTP/2
           '@ | Set-Content "$env:USERPROFILE\.gitconfig"
-          git init .
-          git remote add origin https://github.com/Devsh-Graphics-Programming/Nabla.git
 
-      - name: Restore git objects cache
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            .git-mirror/nabla.git
-            .git/modules
-          key: nabla-mirror-
-          restore-keys: |
-            nabla-mirror-
+          git clone --filter=blob:none --no-checkout `
+            --reference-if-able .git-mirror/nabla.git --dissociate `
+            https://github.com/Devsh-Graphics-Programming/Nabla.git .
 
-      - name: Checkout (mirror + submodules shallow)
-        shell: pwsh
-        run: |
           if (-not (Test-Path '.git-mirror')) { New-Item -ItemType Directory -Path .git-mirror | Out-Null }
           if (-not (Test-Path '.git-mirror/nabla.git')) {
             git clone --mirror --filter=blob:none https://github.com/Devsh-Graphics-Programming/Nabla.git .git-mirror/nabla.git
@@ -50,12 +49,9 @@ jobs:
           git checkout FETCH_HEAD
 
           git submodule sync --recursive
-          git -c submodule.alternateLocation=superproject `
-              -c submodule.alternateErrorStrategy=info `
-              -c submodule.fetchJobs=64 `
-              submodule update --init --recursive --depth 1 --jobs 64 --recommend-shallow
+          git submodule update --init --recursive --depth 1 --jobs 64 --recommend-shallow
 
-      - name: Save git objects cache (only master from upstream)
+      - name: Save git objects cache
         if: github.ref == 'refs/heads/master'
         uses: actions/cache/save@v4
         with:
