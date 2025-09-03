@@ -8,39 +8,48 @@ on:
 jobs:
   nabla-checkout:
     runs-on: windows-2022
-    steps:
+    steps:       
+      - name: Init Git
+        shell: pwsh
+        run: |
+          git config --global url."https://github.com/".insteadOf git@github.com:
+          git config --global protocol.version 2
+          git config --global fetch.parallel 64
+          git config --global checkout.workers 16
+          git config --global http.version HTTP/2
+          git init .
+          git remote add origin https://github.com/Devsh-Graphics-Programming/Nabla.git
+
       - name: Restore git objects cache
         uses: actions/cache/restore@v4
         with:
           path: |
             .git-mirror/nabla.git
-            wt/.git/modules
+            .git/modules
           key: nabla-mirror-
           restore-keys: |
             nabla-mirror-
 
-      - name: Submodules (shallow + alternates)
+      - name: Checkout (mirror + submodules shallow)
         shell: pwsh
+        env:
+          GIT_OPTIONAL_LOCKS: "0"
+          GIT_ATTR_NOSYSTEM: "1"
         run: |
           if (-not (Test-Path '.git-mirror')) { New-Item -ItemType Directory -Path .git-mirror | Out-Null }
           if (-not (Test-Path '.git-mirror/nabla.git')) {
             git clone --mirror --filter=blob:none https://github.com/Devsh-Graphics-Programming/Nabla.git .git-mirror/nabla.git
           }
-          git -c fetch.parallel=64 -c http.version=HTTP/2 -c protocol.version=2 --git-dir .git-mirror/nabla.git fetch --filter=blob:none --no-tags --force origin +$env:GITHUB_REF:$env:GITHUB_REF
-          if (Test-Path 'wt') { Remove-Item -Recurse -Force 'wt' }
-          git -c checkout.workers=16 --git-dir .git-mirror/nabla.git worktree add --force --detach wt $env:GITHUB_SHA
-          git -C wt submodule sync --recursive
-          git -C wt `
-            -c fetch.parallel=64 `
-            -c checkout.workers=16 `
-            -c http.version=HTTP/2 `
-            -c protocol.version=2 `
-            -c submodule.fetchJobs=64 `
-            -c submodule.alternateLocation=superproject `
-            -c submodule.alternateErrorStrategy=info `
-            -c url.https://github.com/.insteadof=git@github.com: `
-            -c url.https://github.com/.insteadof=ssh://git@github.com/ `
-            submodule update --init --recursive --depth 1 --jobs 64 --recommend-shallow
+          git --git-dir .git-mirror/nabla.git fetch --filter=blob:none --no-tags --force origin master
+
+          git fetch --depth=1 origin $env:GITHUB_REF
+          git checkout FETCH_HEAD
+
+          git submodule sync --recursive
+          git -c submodule.alternateLocation=superproject `
+              -c submodule.alternateErrorStrategy=info `
+              -c submodule.fetchJobs=64 `
+              submodule update --init --recursive --depth 1 --jobs 64 --recommend-shallow
 
       - name: Save git objects cache (only master from upstream)
         if: github.ref == 'refs/heads/master'
@@ -48,5 +57,5 @@ jobs:
         with:
           path: |
             .git-mirror/nabla.git
-            wt/.git/modules
+            .git/modules
           key: nabla-mirror-${{ github.run_id }}
