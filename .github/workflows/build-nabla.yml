@@ -13,8 +13,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: |
-            .git-mirror/nabla.git
-            .git/modules
+            ${{ runner.temp }}\git-mirror\nabla.git
+            .git\modules
           key: nabla-mirror-
           restore-keys: |
             nabla-mirror-
@@ -35,15 +35,17 @@ jobs:
               version = HTTP/2
           '@ | Set-Content "$env:USERPROFILE\.gitconfig"
 
-          git clone --filter=blob:none --no-checkout `
-            --reference-if-able .git-mirror/nabla.git --dissociate `
-            https://github.com/Devsh-Graphics-Programming/Nabla.git .
-
-          if (-not (Test-Path '.git-mirror')) { New-Item -ItemType Directory -Path .git-mirror | Out-Null }
-          if (-not (Test-Path '.git-mirror/nabla.git')) {
-            git clone --mirror --filter=blob:none https://github.com/Devsh-Graphics-Programming/Nabla.git .git-mirror/nabla.git
+          $mirrorRoot = Join-Path $env:RUNNER_TEMP 'git-mirror'
+          $mirrorRepo = Join-Path $mirrorRoot 'nabla.git'
+          if (-not (Test-Path $mirrorRoot)) { New-Item -ItemType Directory -Path $mirrorRoot | Out-Null }
+          if (-not (Test-Path $mirrorRepo)) {
+            git clone --mirror --filter=blob:none https://github.com/Devsh-Graphics-Programming/Nabla.git $mirrorRepo
           }
-          git --git-dir .git-mirror/nabla.git fetch --filter=blob:none --no-tags --force origin master
+          git --git-dir $mirrorRepo fetch --filter=blob:none --no-tags --force origin master
+
+          git clone --filter=blob:none --no-checkout `
+            --reference-if-able $mirrorRepo --dissociate `
+            https://github.com/Devsh-Graphics-Programming/Nabla.git .
 
           git fetch --depth=1 origin $env:GITHUB_REF
           git checkout FETCH_HEAD
@@ -56,6 +58,6 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: |
-            .git-mirror/nabla.git
-            .git/modules
+            ${{ runner.temp }}\git-mirror\nabla.git
+            .git\modules
           key: nabla-mirror-${{ github.run_id }}
