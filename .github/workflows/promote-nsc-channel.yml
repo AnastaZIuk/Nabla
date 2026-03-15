@@ -136,6 +136,7 @@ jobs:
 
           source_repo_url="https://github.com/${SOURCE_REPO}"
           source_commit_url="${source_repo_url}/commit/${SOURCE_SHA}"
+          updated_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           notes_file="${RUNNER_TEMP}/nsc-release-notes.md"
           cat > "${notes_file}" <<EOF
           Promoted NSC payload from [\`${SOURCE_REPO}\`](${source_repo_url}).
@@ -144,11 +145,15 @@ jobs:
           - source branch: \`${SOURCE_BRANCH}\`
           - source event: \`${SOURCE_EVENT}\`
           - source run: [\`${RUN_ID}\`](${RUN_URL})
+
+          Updated at \`${updated_at}\`.
           EOF
 
           release_exists=false
-          if gh release view "${RELEASE_TAG}" --repo "${ASSET_REPO}" >/dev/null 2>&1; then
+          release_id=""
+          if release_json="$(gh api "repos/${ASSET_REPO}/releases/tags/${RELEASE_TAG}")"; then
             release_exists=true
+            release_id="$(jq -r '.id' <<<"${release_json}")"
           fi
 
           if [[ "${release_exists}" == "false" ]]; then
@@ -167,12 +172,15 @@ jobs:
             gh release upload "${RELEASE_TAG}" "${payload_assets[@]}" --repo "${ASSET_REPO}"
           else
             echo "Release ${RELEASE_TAG} already exists in ${ASSET_REPO}. Reusing immutable release."
-            if ! gh release edit "${RELEASE_TAG}" \
-              --repo "${ASSET_REPO}" \
-              --title "${RELEASE_TAG}" \
-              --notes-file "${notes_file}"; then
-              echo "Skipping release note refresh for existing ${RELEASE_TAG}." >&2
-            fi
+            patch_file="${RUNNER_TEMP}/nsc-release-patch.json"
+            jq -n \
+              --arg name "${RELEASE_TAG}" \
+              --rawfile body "${notes_file}" \
+              '{name:$name, body:$body}' > "${patch_file}"
+            gh api \
+              --method PATCH \
+              "repos/${ASSET_REPO}/releases/${release_id}" \
+              --input "${patch_file}" >/dev/null
           fi
 
       - name: Update manifests and tag pin
