@@ -798,24 +798,29 @@ bool ILogicalDevice::createComputePipelines(IGPUPipelineCache* const pipelineCac
         return false;
     }
 
-    core::vector<IGPUComputePipeline::SCreationParams> newParams(params.begin(), params.end());
-    const auto shaderCount = params.size();
-    
-    core::vector<core::smart_refctd_ptr<const asset::IShader>> trimmedShaders; // vector to hold all the trimmed shaders, so the pointer from the new ShaderSpecInfo is not dangling
-    trimmedShaders.reserve(shaderCount);
-
-    for (auto ix = 0u; ix < params.size(); ix++)
+    if (m_trimComputeEntryPoints)
     {
-        const auto& ci = params[ix];
+        core::vector<IGPUComputePipeline::SCreationParams> newParams(params.begin(), params.end());
+        const auto shaderCount = params.size();
+        
+        core::vector<core::smart_refctd_ptr<const asset::IShader>> trimmedShaders; // vector to hold all the trimmed shaders, so the pointer from the new ShaderSpecInfo is not dangling
+        trimmedShaders.reserve(shaderCount);
 
-        const core::set entryPoints = { asset::ISPIRVEntryPointTrimmer::EntryPoint{.name = ci.shader.entryPoint, .stage = hlsl::ShaderStage::ESS_COMPUTE} };
-        trimmedShaders.push_back(m_spirvTrimmer->trim(ci.shader.shader, entryPoints, m_logger));
-        auto trimmedShaderSpec = ci.shader;
-        trimmedShaderSpec.shader = trimmedShaders.back().get();
-        newParams[ix].shader = trimmedShaderSpec;
+        for (auto ix = 0u; ix < params.size(); ix++)
+        {
+            const auto& ci = params[ix];
+
+            const core::set entryPoints = { asset::ISPIRVEntryPointTrimmer::EntryPoint{.name = ci.shader.entryPoint, .stage = hlsl::ShaderStage::ESS_COMPUTE} };
+            trimmedShaders.push_back(m_spirvTrimmer->trim(ci.shader.shader, entryPoints, m_logger));
+            auto trimmedShaderSpec = ci.shader;
+            trimmedShaderSpec.shader = trimmedShaders.back().get();
+            newParams[ix].shader = trimmedShaderSpec;
+        }
+
+        createComputePipelines_impl(pipelineCache,newParams,output,specConstantValidation);
     }
-
-    createComputePipelines_impl(pipelineCache,newParams,output,specConstantValidation);
+    else
+        createComputePipelines_impl(pipelineCache, params, output, specConstantValidation);
     
     bool retval = true;
     for (auto i=0u; i<params.size(); i++)

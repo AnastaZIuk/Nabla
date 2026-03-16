@@ -1022,6 +1022,8 @@ class NBL_API2 ILogicalDevice : public core::IReferenceCounted, public IDeviceMe
         }
 
         bool createComputePipelines(IGPUPipelineCache* const pipelineCache, const std::span<const IGPUComputePipeline::SCreationParams> params, core::smart_refctd_ptr<IGPUComputePipeline>* const output);
+        inline void setComputeEntryPointTrimmingEnabled(const bool enabled) { m_trimComputeEntryPoints = enabled; }
+        inline bool isComputeEntryPointTrimmingEnabled() const { return m_trimComputeEntryPoints; }
 
         bool createGraphicsPipelines(
             IGPUPipelineCache* const pipelineCache,
@@ -1322,6 +1324,7 @@ class NBL_API2 ILogicalDevice : public core::IReferenceCounted, public IDeviceMe
         };
         const std::array<QueueFamilyInfo,MaxQueueFamilies> m_queueFamilyInfos;
         core::smart_refctd_ptr<asset::ISPIRVEntryPointTrimmer> m_spirvTrimmer;
+        bool m_trimComputeEntryPoints = true;
         
     private:
         const SPhysicalDeviceLimits& getPhysicalDeviceLimits() const;
