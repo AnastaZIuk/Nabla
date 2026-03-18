@@ -361,6 +361,10 @@ function(nbl_install_exe_spec _TARGETS _RELATIVE_DESTINATION)
 	endif()
 	
 	install(TARGETS ${_TARGETS} ${_EXPORT_ARGS} RUNTIME DESTINATION ${_DEST_GE_} COMPONENT ${_COMPONENT})
+
+	foreach(_TRGT IN LISTS _TARGETS)
+		install(PROGRAMS $<TARGET_PDB_FILE:${_TRGT}> DESTINATION debug/exe/${_RELATIVE_DESTINATION} CONFIGURATIONS Debug COMPONENT ${_COMPONENT})
+	endforeach()
 	
 	foreach(_TRGT IN LISTS _TARGETS)
 		get_property(_DEFINED_PROPERTY_
@@ -1521,8 +1525,6 @@ namespace @IMPL_NAMESPACE@ {
         set(MODE_ARGS "")
         if(RULE_MODE STREQUAL "preprocess")
             set(OUTPUT_EXT ".preprocessed.hlsl")
-            set(OUTPUT_PREFIX "")
-            set(OUTPUT_GROUP_BY_CONFIG FALSE)
             list(APPEND MODE_ARGS -P)
         endif()
 
@@ -1575,9 +1577,6 @@ namespace @IMPL_NAMESPACE@ {
 
 				set(NBL_NSC_DEPFILE_ARGS "")
 				set(NBL_NSC_RULE_USE_DEPFILE ${NSC_USE_DEPFILE})
-				if(RULE_MODE STREQUAL "preprocess")
-					set(NBL_NSC_RULE_USE_DEPFILE OFF)
-				endif()
 				if(NBL_NSC_RULE_USE_DEPFILE)
 					set(NBL_NSC_DEPFILE_ARGS -MD -MF "${DEPFILE_PATH}")
 				endif()
